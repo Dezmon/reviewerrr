@@ -63,6 +63,7 @@
       textarea[hidden] { display: none; }
       .controls {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
         gap: 10px;
         margin: 12px 0;
@@ -78,8 +79,9 @@
         cursor: pointer;
         transition: filter 80ms ease, transform 60ms ease;
       }
-      button:hover { filter: brightness(0.96); }
-      button:active { transform: translateY(1px); }
+      button:hover:not(:disabled) { filter: brightness(0.96); }
+      button:active:not(:disabled) { transform: translateY(1px); }
+      button:disabled { opacity: 0.45; cursor: not-allowed; }
       button.primary {
         background: #0a84ff;
         color: #fff;
@@ -145,6 +147,10 @@
     <textarea id="text" placeholder="Paste your text here&hellip;" spellcheck="false"></textarea>
     <div class="controls">
       <button id="start" type="button" class="primary">Start</button>
+      <button id="delete" type="button" disabled aria-keyshortcuts="ArrowLeft">Delete</button>
+      <button id="keep" type="button" disabled aria-keyshortcuts="ArrowRight">Keep</button>
+      <button id="undo" type="button" disabled aria-keyshortcuts="ArrowDown">Undo</button>
+      <button id="first" type="button" disabled aria-keyshortcuts="ArrowUp">First</button>
       <button id="copy" type="button">Copy</button>
       <span id="status" aria-live="polite"></span>
     </div>
@@ -166,9 +172,14 @@
 
       const $text = /** @type {HTMLTextAreaElement} */ (document.getElementById('text'));
       const $start = /** @type {HTMLButtonElement} */ (document.getElementById('start'));
+      const $delete = /** @type {HTMLButtonElement} */ (document.getElementById('delete'));
+      const $keep = /** @type {HTMLButtonElement} */ (document.getElementById('keep'));
+      const $undo = /** @type {HTMLButtonElement} */ (document.getElementById('undo'));
+      const $first = /** @type {HTMLButtonElement} */ (document.getElementById('first'));
       const $copy = /** @type {HTMLButtonElement} */ (document.getElementById('copy'));
       const $view = /** @type {HTMLDivElement} */ (document.getElementById('view'));
       const $status = /** @type {HTMLSpanElement} */ (document.getElementById('status'));
+      const $triageButtons = [$delete, $keep, $undo, $first];
 
       /** @param {string} input */
       function splitSentences(input) {
@@ -261,6 +272,7 @@
         $text.hidden = true;
         $start.textContent = 'Reset';
         $start.classList.remove('primary');
+        $triageButtons.forEach(b => { b.disabled = false; });
         if (document.activeElement instanceof HTMLElement) {
           document.activeElement.blur();
         }
@@ -276,6 +288,7 @@
         $text.hidden = false;
         $start.textContent = 'Start';
         $start.classList.add('primary');
+        $triageButtons.forEach(b => { b.disabled = true; });
         $view.replaceChildren();
         $status.textContent = '';
       }
@@ -382,6 +395,10 @@
         if (state.active) reset();
         else start();
       });
+      $delete.addEventListener('click', () => { if (state.active) deleteCurrent(); });
+      $keep.addEventListener('click', () => { if (state.active) advance(); });
+      $undo.addEventListener('click', () => { if (state.active) undo(); });
+      $first.addEventListener('click', () => { if (state.active) jumpToFirst(); });
       $copy.addEventListener('click', copy);
       document.addEventListener('keydown', onKeyDown);
     </script>

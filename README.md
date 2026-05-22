@@ -6,14 +6,14 @@ A single-page web app for quickly triaging a block of text one sentence at a tim
 
 1. Paste text into the textarea.
 2. Press **Start**. The textarea is replaced by a highlighted view of the parsed sentences.
-3. Triage with the keyboard:
+3. Triage with the keyboard, or tap the equivalent buttons in the controls row:
 
-   | Key                          | Action                          |
-   | ---------------------------- | ------------------------------- |
-   | <kbd>→</kbd>                 | Keep current; advance           |
-   | <kbd>←</kbd> / <kbd>Backspace</kbd> | Delete current; advance         |
-   | <kbd>↓</kbd>                 | Undo last delete                |
-   | <kbd>↑</kbd>                 | Jump to first kept sentence     |
+   | Key                                | Button   | Action                      |
+   | ---------------------------------- | -------- | --------------------------- |
+   | <kbd>→</kbd>                       | Keep     | Keep current; advance       |
+   | <kbd>←</kbd> / <kbd>Backspace</kbd> | Delete   | Delete current; advance     |
+   | <kbd>↓</kbd>                       | Undo     | Undo last delete            |
+   | <kbd>↑</kbd>                       | First    | Jump to first kept sentence |
 
 4. Press **Copy** to put the kept text on the clipboard. Press **Reset** to edit again.
 

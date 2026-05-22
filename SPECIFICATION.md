@@ -11,7 +11,7 @@ A keyboard-driven tool for triaging text one sentence at a time. The user pastes
 Three regions, top to bottom:
 
 1. **Text area** — Plain `<textarea>` where the user pastes input. Spans the full page width minus body padding. Tall enough to show roughly 10 lines.
-2. **Controls row** — `Start` button, `Copy` button, and a status indicator (e.g. `3 / 7 kept`).
+2. **Controls row** — `Start` button, four triage buttons (`Delete`, `Keep`, `Undo`, `First`), `Copy` button, and a status indicator (e.g. `3 / 7 kept`). The triage buttons mirror the keyboard arrow actions one-for-one, for touch users. They are disabled in the idle state and enabled in the active state.
 3. **View** — A rendered panel showing the parsed sentences with the current one highlighted. Empty (with placeholder hint) until `Start` is pressed.
 
 Above the text area: a title and a one-line hint listing the arrow-key bindings.
@@ -64,6 +64,8 @@ state = {
 | `↑` (ArrowUp)             | Move the highlight to the first kept sentence. Does not change kept/deleted state or the undo stack. No-op if no sentences remain kept. |
 
 Arrow keys are suppressed (no effect, no `preventDefault`) when focus is in a writable `<input>`, writable `<textarea>`, or `contenteditable` element. The active-mode textarea is read-only, so it does **not** swallow keys.
+
+The triage buttons (`Delete`, `Keep`, `Undo`, `First`) invoke the same handlers as the corresponding arrow keys.
 
 When a handled key is pressed, the handler should call `preventDefault()` so the browser doesn't also scroll or move the textarea caret.
 
