@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sentence Reviewer</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        padding: 16px;
+        background: #f7f7f8;
+        color: #1d1d1f;
+        min-height: 100vh;
+      }
+      header h1 {
+        font-size: 1.35rem;
+        margin: 0 0 6px;
+        letter-spacing: -0.01em;
+      }
+      .hint {
+        font-size: 0.9rem;
+        color: #555;
+        margin: 0 0 14px;
+        line-height: 1.5;
+      }
+      kbd {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        background: #e5e5ea;
+        padding: 1px 7px;
+        border-radius: 4px;
+        font-size: 0.85em;
+        border: 1px solid #d2d2d7;
+        border-bottom-width: 2px;
+      }
+      textarea {
+        width: 100%;
+        display: block;
+        min-height: 220px;
+        padding: 12px 14px;
+        font: inherit;
+        font-size: 0.95rem;
+        line-height: 1.5;
+        border-radius: 8px;
+        border: 1px solid #d2d2d7;
+        background: #fff;
+        color: inherit;
+        resize: vertical;
+      }
+      textarea:focus {
+        outline: 2px solid #0a84ff;
+        outline-offset: -1px;
+        border-color: transparent;
+      }
+      textarea[readonly] {
+        background: #f0f0f3;
+        color: #6c6c70;
+      }
+      .controls {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 12px 0;
+      }
+      button {
+        font: inherit;
+        font-size: 0.95rem;
+        padding: 8px 18px;
+        border-radius: 8px;
+        border: 1px solid #d2d2d7;
+        background: #fff;
+        color: inherit;
+        cursor: pointer;
+        transition: filter 80ms ease, transform 60ms ease;
+      }
+      button:hover { filter: brightness(0.96); }
+      button:active { transform: translateY(1px); }
+      button.primary {
+        background: #0a84ff;
+        color: #fff;
+        border-color: #0a84ff;
+      }
+      #status {
+        font-size: 0.85rem;
+        color: #6c6c70;
+        margin-left: auto;
+        font-variant-numeric: tabular-nums;
+      }
+      .view {
+        width: 100%;
+        margin-top: 4px;
+        padding: 18px 20px;
+        border-radius: 8px;
+        border: 1px dashed #d2d2d7;
+        background: #fff;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        min-height: 100px;
+        font-size: 1rem;
+        line-height: 1.7;
+      }
+      .view:empty::before {
+        content: "Press Start to begin reviewing sentences.";
+        color: #999;
+        font-style: italic;
+      }
+      .sentence { border-radius: 3px; padding: 1px 2px; }
+      .sentence.current {
+        background: #ffe066;
+        color: #1d1d1f;
+        box-shadow: 0 0 0 2px #ffd43b;
+      }
+      .sentence.deleted { display: none; }
+
+      @media (prefers-color-scheme: dark) {
+        body { background: #1c1c1e; color: #f2f2f7; }
+        .hint { color: #aeaeb2; }
+        kbd { background: #3a3a3c; border-color: #48484a; color: #f2f2f7; }
+        textarea { background: #2c2c2e; border-color: #48484a; }
+        textarea[readonly] { background: #232325; color: #8e8e93; }
+        button { background: #2c2c2e; border-color: #48484a; }
+        button.primary { background: #0a84ff; color: #fff; border-color: #0a84ff; }
+        #status { color: #aeaeb2; }
+        .view { background: #2c2c2e; border-color: #48484a; }
+        .sentence.current { background: #ffd43b; color: #1d1d1f; }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Sentence Reviewer</h1>
+      <p class="hint">
+        Paste text, press <strong>Start</strong>, then use
+        <kbd>&rarr;</kbd> to keep and advance,
+        <kbd>&larr;</kbd> (or <kbd>Backspace</kbd>) to delete,
+        <kbd>&uarr;</kbd> to undo.
+      </p>
+    </header>
+    <textarea id="text" placeholder="Paste your text here&hellip;" spellcheck="false"></textarea>
+    <div class="controls">
+      <button id="start" type="button" class="primary">Start</button>
+      <button id="copy" type="button">Copy</button>
+      <span id="status" aria-live="polite"></span>
+    </div>
+    <div id="view" class="view" aria-live="polite"></div>
+
+    <script>
+      'use strict';
+
+      /** @typedef {{ text: string, trailing: string, kept: boolean }} Sentence */
+
+      const state = {
+        active: false,
+        /** @type {Sentence[]} */
+        sentences: [],
+        current: -1,
+        /** @type {number[]} */
+        history: [],
+      };
+
+      const $text = /** @type {HTMLTextAreaElement} */ (document.getElementById('text'));
+      const $start = /** @type {HTMLButtonElement} */ (document.getElementById('start'));
+      const $copy = /** @type {HTMLButtonElement} */ (document.getElementById('copy'));
+      const $view = /** @type {HTMLDivElement} */ (document.getElementById('view'));
+      const $status = /** @type {HTMLSpanElement} */ (document.getElementById('status'));
+
+      /** @param {string} input */
+      function splitSentences(input) {
+        if (!input) return [];
+        // Capture-group split keeps separators. Boundaries:
+        //   .!? followed by whitespace, OR a run of newlines.
+        const parts = input.split(/((?<=[.!?])\s+|\n+)/);
+        /** @type {Sentence[]} */
+        const result = [];
+        for (let i = 0; i < parts.length; i += 2) {
+          const text = parts[i] ?? '';
+          const trailing = parts[i + 1] ?? '';
+          if (text.trim() === '') continue;
+          result.push({ text, trailing, kept: true });
+        }
+        return result;
+      }
+
+      function joinKept() {
+        return state.sentences.map(s => (s.kept ? s.text + s.trailing : '')).join('');
+      }
+
+      function firstKeptIndex() {
+        return state.sentences.findIndex(s => s.kept);
+      }
+
+      /** @param {number} from */
+      function nextKeptIndex(from) {
+        for (let i = from + 1; i < state.sentences.length; i++) {
+          if (state.sentences[i].kept) return i;
+        }
+        return -1;
+      }
+
+      /** @param {number} from */
+      function prevKeptIndex(from) {
+        for (let i = from - 1; i >= 0; i--) {
+          if (state.sentences[i].kept) return i;
+        }
+        return -1;
+      }
+
+      function render() {
+        $view.replaceChildren();
+        if (!state.active) return;
+
+        state.sentences.forEach((s, i) => {
+          const span = document.createElement('span');
+          span.className = 'sentence';
+          if (!s.kept) span.classList.add('deleted');
+          if (i === state.current) span.classList.add('current');
+          span.textContent = s.text;
+          $view.appendChild(span);
+          if (s.kept && s.trailing) {
+            $view.appendChild(document.createTextNode(s.trailing));
+          }
+        });
+
+        $text.value = joinKept();
+        updateStatus();
+        scrollCurrentIntoView();
+      }
+
+      function scrollCurrentIntoView() {
+        const el = $view.querySelector('.sentence.current');
+        if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+
+      function updateStatus() {
+        if (!state.active) {
+          $status.textContent = '';
+          return;
+        }
+        const kept = state.sentences.filter(s => s.kept).length;
+        const total = state.sentences.length;
+        $status.textContent = `${kept} / ${total} kept`;
+      }
+
+      function start() {
+        const sentences = splitSentences($text.value);
+        if (sentences.length === 0) {
+          flashStatus('No text to review');
+          return;
+        }
+        state.active = true;
+        state.sentences = sentences;
+        state.current = firstKeptIndex();
+        state.history = [];
+        $text.readOnly = true;
+        $start.textContent = 'Reset';
+        $start.classList.remove('primary');
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+        render();
+      }
+
+      function reset() {
+        state.active = false;
+        state.sentences = [];
+        state.current = -1;
+        state.history = [];
+        $text.readOnly = false;
+        $start.textContent = 'Start';
+        $start.classList.add('primary');
+        $view.replaceChildren();
+        $status.textContent = '';
+      }
+
+      function advance() {
+        if (state.current === -1) {
+          state.current = firstKeptIndex();
+        } else {
+          const next = nextKeptIndex(state.current);
+          if (next !== -1) state.current = next;
+        }
+        render();
+      }
+
+      function deleteCurrent() {
+        if (state.current < 0) return;
+        const i = state.current;
+        if (!state.sentences[i].kept) return;
+        state.sentences[i].kept = false;
+        state.history.push(i);
+        const next = nextKeptIndex(i);
+        state.current = next !== -1 ? next : prevKeptIndex(i);
+        render();
+      }
+
+      function undo() {
+        const i = state.history.pop();
+        if (i === undefined) return;
+        state.sentences[i].kept = true;
+        state.current = i;
+        render();
+      }
+
+      async function copy() {
+        const text = $text.value;
+        if (!text) {
+          flashStatus('Nothing to copy');
+          return;
+        }
+        try {
+          await navigator.clipboard.writeText(text);
+          flashStatus('Copied');
+        } catch {
+          const wasReadOnly = $text.readOnly;
+          $text.readOnly = false;
+          $text.select();
+          document.execCommand('copy');
+          $text.readOnly = wasReadOnly;
+          window.getSelection()?.removeAllRanges();
+          flashStatus('Copied');
+        }
+      }
+
+      let flashTimer;
+      /** @param {string} message */
+      function flashStatus(message) {
+        $status.textContent = message;
+        if (flashTimer !== undefined) clearTimeout(flashTimer);
+        flashTimer = setTimeout(() => updateStatus(), 1200);
+      }
+
+      /** @param {KeyboardEvent} e */
+      function onKeyDown(e) {
+        if (!state.active) return;
+        const target = /** @type {HTMLElement | null} */ (e.target);
+        if (target) {
+          const tag = target.tagName;
+          if (tag === 'INPUT') return;
+          if (tag === 'TEXTAREA' && !(/** @type {HTMLTextAreaElement} */ (target)).readOnly) return;
+          if (target.isContentEditable) return;
+        }
+        switch (e.key) {
+          case 'ArrowRight':
+            e.preventDefault();
+            advance();
+            break;
+          case 'ArrowLeft':
+          case 'Backspace':
+            e.preventDefault();
+            deleteCurrent();
+            break;
+          case 'ArrowUp':
+            e.preventDefault();
+            undo();
+            break;
+        }
+      }
+
+      $start.addEventListener('click', () => {
+        if (state.active) reset();
+        else start();
+      });
+      $copy.addEventListener('click', copy);
+      document.addEventListener('keydown', onKeyDown);
+    </script>
+  </body>
+</html>
