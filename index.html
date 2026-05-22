@@ -60,6 +60,7 @@
         background: #f0f0f3;
         color: #6c6c70;
       }
+      textarea[hidden] { display: none; }
       .controls {
         display: flex;
         align-items: center;
@@ -257,6 +258,7 @@
         state.current = firstKeptIndex();
         state.history = [];
         $text.readOnly = true;
+        $text.hidden = true;
         $start.textContent = 'Reset';
         $start.classList.remove('primary');
         if (document.activeElement instanceof HTMLElement) {
@@ -271,6 +273,7 @@
         state.current = -1;
         state.history = [];
         $text.readOnly = false;
+        $text.hidden = false;
         $start.textContent = 'Start';
         $start.classList.add('primary');
         $view.replaceChildren();
@@ -324,10 +327,13 @@
           flashStatus('Copied');
         } catch {
           const wasReadOnly = $text.readOnly;
+          const wasHidden = $text.hidden;
           $text.readOnly = false;
+          $text.hidden = false;
           $text.select();
           document.execCommand('copy');
           $text.readOnly = wasReadOnly;
+          $text.hidden = wasHidden;
           window.getSelection()?.removeAllRanges();
           flashStatus('Copied');
         }
