@@ -60,6 +60,7 @@
         background: #f0f0f3;
         color: #6c6c70;
       }
+      textarea[hidden] { display: none; }
       .controls {
         display: flex;
         align-items: center;
@@ -137,7 +138,8 @@
         Paste text, press <strong>Start</strong>, then use
         <kbd>&rarr;</kbd> to keep and advance,
         <kbd>&larr;</kbd> (or <kbd>Backspace</kbd>) to delete,
-        <kbd>&uarr;</kbd> to undo.
+        <kbd>&darr;</kbd> to undo,
+        <kbd>&uarr;</kbd> to jump to the first sentence.
       </p>
     </header>
     <textarea id="text" placeholder="Paste your text here&hellip;" spellcheck="false"></textarea>
@@ -256,6 +258,7 @@
         state.current = firstKeptIndex();
         state.history = [];
         $text.readOnly = true;
+        $text.hidden = true;
         $start.textContent = 'Reset';
         $start.classList.remove('primary');
         if (document.activeElement instanceof HTMLElement) {
@@ -270,6 +273,7 @@
         state.current = -1;
         state.history = [];
         $text.readOnly = false;
+        $text.hidden = false;
         $start.textContent = 'Start';
         $start.classList.add('primary');
         $view.replaceChildren();
@@ -297,6 +301,13 @@
         render();
       }
 
+      function jumpToFirst() {
+        const first = firstKeptIndex();
+        if (first === -1) return;
+        state.current = first;
+        render();
+      }
+
       function undo() {
         const i = state.history.pop();
         if (i === undefined) return;
@@ -316,10 +327,13 @@
           flashStatus('Copied');
         } catch {
           const wasReadOnly = $text.readOnly;
+          const wasHidden = $text.hidden;
           $text.readOnly = false;
+          $text.hidden = false;
           $text.select();
           document.execCommand('copy');
           $text.readOnly = wasReadOnly;
+          $text.hidden = wasHidden;
           window.getSelection()?.removeAllRanges();
           flashStatus('Copied');
         }
@@ -353,9 +367,13 @@
             e.preventDefault();
             deleteCurrent();
             break;
-          case 'ArrowUp':
+          case 'ArrowDown':
             e.preventDefault();
             undo();
+            break;
+          case 'ArrowUp':
+            e.preventDefault();
+            jumpToFirst();
             break;
         }
       }

@@ -28,7 +28,7 @@ The app has two states.
 - `Start` button is labeled "Start" with primary styling.
 
 ### Active
-- Text area is read-only and always reflects the current "kept" text.
+- Text area is hidden. Its value is still maintained internally (read-only) and reflects the current "kept" text, so Copy continues to work, but it is not visible to the user — the view region is the only display of the text being edited.
 - View region shows each sentence as an inline span. The current sentence has a highlight (e.g. yellow background with a ring). Deleted sentences are hidden from view but retained in state so they can be undone.
 - Status indicator shows `<kept count> / <total count> kept`.
 - Arrow keys are bound (see Keyboard).
@@ -49,8 +49,8 @@ state = {
 
 ## Transitions
 
-- **Start (idle → active)**: parse the textarea content into sentences. If zero non-empty sentences result, flash "No text to review" in the status and stay idle. Otherwise: set `active = true`, `current = index of first kept sentence`, clear `history`, make textarea read-only, blur whatever element had focus.
-- **Reset (active → idle)**: clear `sentences`, `history`, set `current = -1`, make textarea editable again, clear the view and status.
+- **Start (idle → active)**: parse the textarea content into sentences. If zero non-empty sentences result, flash "No text to review" in the status and stay idle. Otherwise: set `active = true`, `current = index of first kept sentence`, clear `history`, make textarea read-only and hide it, blur whatever element had focus.
+- **Reset (active → idle)**: clear `sentences`, `history`, set `current = -1`, make textarea editable and visible again, clear the view and status.
 - **Copy (any state)**: copy the textarea's current value to the clipboard. Flash "Copied" in the status. If the textarea is empty, flash "Nothing to copy" instead.
 
 ## Keyboard (active state only)
@@ -60,7 +60,8 @@ state = {
 | `→` (ArrowRight)          | Keep current sentence; advance highlight to the next kept sentence. If already at the last kept sentence, stay.                     |
 | `←` (ArrowLeft)           | Mark current sentence as deleted; push its index onto the undo stack; advance to the next kept sentence. If no next, fall back to the previous kept sentence. If none remain, set `current = -1`. |
 | `Backspace`               | Same as ArrowLeft.                                                                                                                  |
-| `↑` (ArrowUp)             | Pop the most recent index from the undo stack; mark that sentence as kept again; move the highlight to it. No-op if the stack is empty. |
+| `↓` (ArrowDown)           | Pop the most recent index from the undo stack; mark that sentence as kept again; move the highlight to it. No-op if the stack is empty. |
+| `↑` (ArrowUp)             | Move the highlight to the first kept sentence. Does not change kept/deleted state or the undo stack. No-op if no sentences remain kept. |
 
 Arrow keys are suppressed (no effect, no `preventDefault`) when focus is in a writable `<input>`, writable `<textarea>`, or `contenteditable` element. The active-mode textarea is read-only, so it does **not** swallow keys.
 
