@@ -60,7 +60,8 @@ state = {
 | `→` (ArrowRight)          | Keep current sentence; advance highlight to the next kept sentence. If already at the last kept sentence, stay.                     |
 | `←` (ArrowLeft)           | Mark current sentence as deleted; push its index onto the undo stack; advance to the next kept sentence. If no next, fall back to the previous kept sentence. If none remain, set `current = -1`. |
 | `Backspace`               | Same as ArrowLeft.                                                                                                                  |
-| `↑` (ArrowUp)             | Pop the most recent index from the undo stack; mark that sentence as kept again; move the highlight to it. No-op if the stack is empty. |
+| `↓` (ArrowDown)           | Pop the most recent index from the undo stack; mark that sentence as kept again; move the highlight to it. No-op if the stack is empty. |
+| `↑` (ArrowUp)             | Move the highlight to the first kept sentence. Does not change kept/deleted state or the undo stack. No-op if no sentences remain kept. |
 
 Arrow keys are suppressed (no effect, no `preventDefault`) when focus is in a writable `<input>`, writable `<textarea>`, or `contenteditable` element. The active-mode textarea is read-only, so it does **not** swallow keys.
 

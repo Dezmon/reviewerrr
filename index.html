@@ -137,7 +137,8 @@
         Paste text, press <strong>Start</strong>, then use
         <kbd>&rarr;</kbd> to keep and advance,
         <kbd>&larr;</kbd> (or <kbd>Backspace</kbd>) to delete,
-        <kbd>&uarr;</kbd> to undo.
+        <kbd>&darr;</kbd> to undo,
+        <kbd>&uarr;</kbd> to jump to the first sentence.
       </p>
     </header>
     <textarea id="text" placeholder="Paste your text here&hellip;" spellcheck="false"></textarea>
@@ -297,6 +298,13 @@
         render();
       }
 
+      function jumpToFirst() {
+        const first = firstKeptIndex();
+        if (first === -1) return;
+        state.current = first;
+        render();
+      }
+
       function undo() {
         const i = state.history.pop();
         if (i === undefined) return;
@@ -353,9 +361,13 @@
             e.preventDefault();
             deleteCurrent();
             break;
-          case 'ArrowUp':
+          case 'ArrowDown':
             e.preventDefault();
             undo();
+            break;
+          case 'ArrowUp':
+            e.preventDefault();
+            jumpToFirst();
             break;
         }
       }
