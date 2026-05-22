@@ -1,4 +1,4 @@
-# Sentence Reviewer
+# Sentence Triage
 
 A single-page web app for quickly flipping through sentences in pasted text, keeping or discarding each via the keyboard, then copying the cleaned-up result.
 

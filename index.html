@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sentence Reviewer</title>
+    <title>Sentence Triage</title>
     <style>
       :root {
         color-scheme: light dark;
@@ -105,7 +105,7 @@
         line-height: 1.7;
       }
       .view:empty::before {
-        content: "Press Start to begin reviewing sentences.";
+        content: "Press Start to begin triaging sentences.";
         color: #999;
         font-style: italic;
       }
@@ -133,7 +133,7 @@
   </head>
   <body>
     <header>
-      <h1>Sentence Reviewer</h1>
+      <h1>Sentence Triage</h1>
       <p class="hint">
         Paste text, press <strong>Start</strong>, then use
         <kbd>&rarr;</kbd> to keep and advance,
@@ -250,7 +250,7 @@
       function start() {
         const sentences = splitSentences($text.value);
         if (sentences.length === 0) {
-          flashStatus('No text to review');
+          flashStatus('No text to triage');
           return;
         }
         state.active = true;
